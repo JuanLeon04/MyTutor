@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administrar Usuarios - Sistema de Tutorías</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="navbar"></div>
+    
+    <div class="container">
+        <h1 class="card-title">Lista de Usuarios</h1>
+        
+        <div id="errorAlert" class="alert alert-error"></div>
+        <div id="loadingDiv" class="loading">
+            <div class="spinner"></div>
+            <p>Cargando usuarios...</p>
+        </div>
+        
+        <div class="card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Apellido</th>
+                        <th>Usuario</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="usuariosBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components/navbar.js"></script>
+    <script>
+        if (!isAuthenticated()) {
+            alert('❌ Debes iniciar sesión');
+            redirect('login.html');
+        }
+        
+        if (!isAdmin()) {
+            alert('❌ No tienes permisos de administrador');
+            redirect('index.html');
+        }
+
+        async function loadUsuarios() {
+            try {
+                const usuarios = await UsuarioAPI.getAll();
+                document.getElementById('loadingDiv').style.display = 'none';
+                
+                if (usuarios.length === 0) {
+                    document.getElementById('usuariosBody').innerHTML = `
+                        <tr><td colspan="6" style="text-align: center;">No hay usuarios disponibles</td></tr>
+                    `;
+                    return;
+                }
+                
+                const usuariosHTML = usuarios.map(usuario => `
+                    <tr>
+                        <td>${usuario.id}</td>
+                        <td>${usuario.nombre}</td>
+                        <td>${usuario.apellido}</td>
+                        <td>${usuario.nombreUsuario}</td>
+                        <td>${usuario.activo ? '<span style="color: var(--green);">✓ Activo</span>' : '<span style="color: red;">✗ Inactivo</span>'}</td>
+                        <td>
+                            ${usuario.nombreUsuario !== 'admin' ? 
+                                `<button onclick="deleteUsuario(${usuario.id})" class="btn btn-danger">Eliminar</button>` : 
+                                '<span style="color: var(--muted);">Protegido</span>'
+                            }
+                        </td>
+                    </tr>
+                `).join('');
+                
+                document.getElementById('usuariosBody').innerHTML = usuariosHTML;
+            } catch (error) {
+                document.getElementById('loadingDiv').style.display = 'none';
+                showError('errorAlert', 'Error al cargar usuarios: ' + error.message);
+            }
+        }
+        
+        async function deleteUsuario(id) {
+            if (!confirm('¿Está seguro de que desea eliminar este usuario?')) return;
+            
+            try {
+                await UsuarioAPI.deleteById(id);
+                alert('✅ Usuario eliminado correctamente');
+                loadUsuarios();
+            } catch (error) {
+                showError('errorAlert', '❌ Error al eliminar usuario: ' + error.message);
+            }
+        }
+        
+        loadUsuarios();
+    </script>
+</body>
+</html>

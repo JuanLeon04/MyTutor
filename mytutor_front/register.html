@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrarse - Sistema de Tutorías</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="navbar"></div>
+    
+    <div class="container">
+        <div class="card" style="max-width: 700px; margin: 2rem auto;">
+            <h2 class="card-title">Registrarse</h2>
+            
+            <div id="errorAlert" class="alert alert-error"></div>
+            <div id="successAlert" class="alert alert-success"></div>
+            
+            <form id="registerForm">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="nombre">Nombre</label>
+                        <input type="text" id="nombre" name="nombre" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="apellido">Apellido</label>
+                        <input type="text" id="apellido" name="apellido" class="form-input" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="correo">Correo Electrónico</label>
+                    <input type="email" id="correo" name="correo" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="telefono">Teléfono</label>
+                    <input type="tel" id="telefono" name="telefono" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="fotoPerfil">URL Foto de Perfil (opcional)</label>
+                    <input type="url" id="fotoPerfil" name="fotoPerfil" class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="nombreUsuario">Nombre de Usuario</label>
+                    <input type="text" id="nombreUsuario" name="nombreUsuario" class="form-input" required>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="password">Contraseña</label>
+                        <input type="password" id="password" name="password" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="confirmPassword">Confirmar Contraseña</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" class="form-input" required>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Registrarse</button>
+            </form>
+            
+            <p style="margin-top: 1rem; text-align: center;">
+                ¿Ya tienes cuenta? <a href="login.html">Inicia sesión aquí</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components/navbar.js"></script>
+    <script>
+        if (isAuthenticated()) {
+            redirect('index.html');
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            hideError('errorAlert');
+            
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                showError('errorAlert', 'Las contraseñas no coinciden');
+                return;
+            }
+            
+            const formData = {
+                nombre: document.getElementById('nombre').value,
+                apellido: document.getElementById('apellido').value,
+                correo: document.getElementById('correo').value,
+                telefono: document.getElementById('telefono').value,
+                fotoPerfil: document.getElementById('fotoPerfil').value,
+                nombreUsuario: document.getElementById('nombreUsuario').value,
+                password: password
+            };
+            
+            const request = sendRequest('/auth/register', 'POST', formData);
+            
+            request.onload = function() {
+                if (request.status === 200) {
+                    showSuccess('successAlert', 'Registro exitoso. Redirigiendo...');
+                    setTimeout(() => redirect('login.html'), 2000);
+                } else {
+                    showError('errorAlert', 'Error al registrarse');
+                }
+            };
+            
+            request.onerror = function() {
+                showError('errorAlert', 'Error de conexión');
+            };
+        });
+    </script>
+</body>
+</html>

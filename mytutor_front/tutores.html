@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutores - Sistema de Tutorías</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="navbar"></div>
+    
+    <div class="container">
+        <h1 class="card-title">Tutores Disponibles</h1>
+        
+        <div id="errorAlert" class="alert alert-error"></div>
+        <div id="loadingDiv" class="loading">
+            <div class="spinner"></div>
+            <p>Cargando tutores...</p>
+        </div>
+        
+        <div id="tutoresGrid" class="grid"></div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components/navbar.js"></script>
+    <script>
+        function loadTutores() {
+            // ✅ La lista de tutores es pública
+            const request = sendRequest('/api/tutor/list', 'GET');
+            
+            request.onload = function() {
+                document.getElementById('loadingDiv').style.display = 'none';
+                
+                if (request.status === 200) {
+                    const tutores = request.response;
+                    
+                    if (tutores.length === 0) {
+                        document.getElementById('tutoresGrid').innerHTML = '<p>No hay tutores disponibles.</p>';
+                        return;
+                    }
+                    
+                    const tutoresHTML = tutores.map(tutor => `
+                        <div class="tutor-card">
+                            <img src="${tutor.usuario?.fotoPerfil || 'https://via.placeholder.com/100'}" 
+                                 alt="${tutor.usuario?.nombre}" 
+                                 class="tutor-avatar">
+                            <h3 class="tutor-name">${tutor.usuario?.nombre} ${tutor.usuario?.apellido}</h3>
+                            <p class="tutor-price">${formatPrice(tutor.precioHora)} / hora</p>
+                            <p style="margin: 1rem 0; color: #666;">${tutor.bio || 'Sin biografía'}</p>
+                            <a href="tutor-detalle.html?id=${tutor.id}" class="btn btn-primary">Ver más</a>
+                            ${isAuthenticated() && isAdmin() ? `
+                                <button onclick="deleteTutor(${tutor.id})" class="btn btn-danger" style="margin-top: 0.5rem;">Eliminar</button>
+                            ` : ''}
+                        </div>
+                    `).join('');
+                    
+                    document.getElementById('tutoresGrid').innerHTML = tutoresHTML;
+                } else if (request.status === 403) {
+                    showError('errorAlert', 'No tienes permisos para ver esta información');
+                } else {
+                    showError('errorAlert', 'Error al cargar tutores');
+                }
+            };
+            
+            request.onerror = function() {
+                document.getElementById('loadingDiv').style.display = 'none';
+                showError('errorAlert', 'Error de conexión');
+            };
+        }
+        
+        function deleteTutor(id) {
+            if (!confirm('¿Está seguro de que desea eliminar este tutor?')) return;
+            
+            const request = sendRequest(`/api/tutor/${id}`, 'DELETE');
+            
+            request.onload = function() {
+                if (request.status === 200 || request.status === 204) {
+                    alert('✅ Tutor eliminado correctamente');
+                    loadTutores();
+                } else {
+                    showError('errorAlert', 'Error al eliminar tutor');
+                }
+            };
+        }
+        
+        loadTutores();
+    </script>
+</body>
+</html>

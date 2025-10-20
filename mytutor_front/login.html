@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Sistema de Tutorías</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="navbar"></div>
+    
+    <div class="container">
+        <div class="card" style="max-width: 500px; margin: 2rem auto;">
+            <h2 class="card-title">Iniciar Sesión</h2>
+            
+            <div id="errorAlert" class="alert alert-error"></div>
+            <div id="successAlert" class="alert alert-success"></div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label class="form-label" for="nombreUsuario">Nombre de Usuario</label>
+                    <input type="text" id="nombreUsuario" name="nombreUsuario" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" class="form-input" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Iniciar Sesión</button>
+            </form>
+            
+            <p style="margin-top: 1rem; text-align: center;">
+                ¿No tienes cuenta? <a href="register.html">Regístrate aquí</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components/navbar.js"></script>
+    <script>
+        if (isAuthenticated()) {
+            redirect('index.html');
+        }
+
+        const form = document.getElementById('loginForm');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideError('errorAlert');
+
+            const data = {
+                nombreUsuario: document.getElementById('nombreUsuario').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const res = await fetch(url + '/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (!res.ok) throw new Error('Credenciales incorrectas');
+
+                const result = await res.text(); // El backend devuelve el token como texto
+                const cleanToken = result.trim(); // Limpiar espacios
+                
+                // Guardar token en localStorage
+                localStorage.setItem('token', cleanToken);
+                console.log('✅ Token guardado correctamente');
+                
+                // ✅ Obtener y guardar el rol del usuario inmediatamente
+                showSuccess('successAlert', '✅ Login exitoso. Cargando perfil...');
+                await loadUserRole();
+                
+                // Redirigir al usuario
+                redirect('index.html');
+            } catch (err) {
+                showError('errorAlert', '❌ ' + err.message);
+            }
+        });
+        
+        // ✅ Función para cargar y guardar el rol del usuario
+        async function loadUserRole() {
+            try {
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                const request = sendRequest('/api/usuario/getMyRole', 'GET');
+                
+                return new Promise((resolve, reject) => {
+                    request.onload = function() {
+                        if (request.status === 200) {
+                            const role = request.response;
+                            console.log('✅ Rol obtenido después de login:', role);
+                            
+                            // ✅ Convertir TUTOR a ROLE_TUTOR para uniformidad
+                            let standardRole = role;
+                            if (role === 'TUTOR') {
+                                standardRole = 'ROLE_TUTOR';
+                                console.log('🔄 Convirtiendo TUTOR -> ROLE_TUTOR');
+                            } else if (role === 'ADMIN') {
+                                standardRole = 'ROLE_ADMIN';
+                                console.log('🔄 Convirtiendo ADMIN -> ROLE_ADMIN');
+                            } else if (role === 'ESTUDIANTE') {
+                                standardRole = 'ROLE_ESTUDIANTE';
+                                console.log('🔄 Convirtiendo ESTUDIANTE -> ROLE_ESTUDIANTE');
+                            }
+                            
+                            // ✅ Guardar el rol en formato estándar
+                            localStorage.setItem('userRole', standardRole);
+                            
+                            // ✅ Marcar si es tutor
+                            if (standardRole === 'ROLE_TUTOR') {
+                                localStorage.setItem('isTutor', 'true');
+                                console.log('✅ Usuario es tutor');
+                            } else {
+                                localStorage.setItem('isTutor', 'false');
+                            }
+                            
+                            resolve(standardRole);
+                        } else {
+                            console.log('❌ Error al obtener rol:', request.status);
+                            reject(new Error('Error al obtener rol'));
+                        }
+                    };
+                    
+                    request.onerror = function() {
+                        console.log('❌ Error de conexión al obtener rol');
+                        reject(new Error('Error de conexión'));
+                    };
+                });
+            } catch (error) {
+                console.error('❌ Error al cargar rol:', error);
+                return null;
+            }
+        }
+    </script>
+</body>
+</html>

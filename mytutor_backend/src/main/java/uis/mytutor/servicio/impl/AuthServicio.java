@@ -41,8 +41,7 @@ public class AuthServicio implements IAuthServicio {
         }else{
             rol = "ESTUDIANTE";
         }
-        // MALA PRACTICA pero me da pereza solucionar en DB xd
-        // igual debe estar registrado en la base de datos si no gg
+        // MALA PRACTICA, se arregla en la próxima entrega
         if (nombreUsuario.equals("admin")){
             rol = "ADMIN";
         }

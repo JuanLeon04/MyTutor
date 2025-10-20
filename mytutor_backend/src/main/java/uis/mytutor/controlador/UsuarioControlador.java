@@ -90,4 +90,10 @@ public class UsuarioControlador {
         }
         return ResponseEntity.notFound().build(); // no existía
     }
+
+    @Operation(summary = "Obtener mi rol")
+    @GetMapping("/getMyRole")
+    public String getMyRole(Authentication authentication) {
+        return authentication.getAuthorities().iterator().next().getAuthority(); // ej. ROLE_TUTOR
+    }
 }

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Tutorías - Inicio</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="navbar"></div>
+    
+    <div class="container">
+        <div class="hero">
+            <h1 class="hero-title">Bienvenido al Sistema de Tutorías UIS</h1>
+            <p class="hero-subtitle">Conectamos estudiantes con tutores expertos para mejorar tu aprendizaje</p>
+            <div class="hero-buttons" id="heroButtons">
+                <!-- Se cargará dinámicamente -->
+            </div>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">🎓</div>
+                <h3 class="feature-title">Encuentra Tutores</h3>
+                <p>Explora nuestra amplia red de tutores calificados en diferentes materias</p>
+                <a href="tutores.html" class="btn btn-primary" style="margin-top: 1rem; display: inline-block;">Ver Tutores</a>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📚</div>
+                <h3 class="feature-title">Materias Disponibles</h3>
+                <p>Accede a tutorías en una variedad de materias académicas</p>
+                <a href="materias.html" class="btn btn-primary" style="margin-top: 1rem; display: inline-block;">Ver Materias</a>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">👨‍🏫</div>
+                <h3 class="feature-title">Conviértete en Tutor</h3>
+                <p>Comparte tu conocimiento y genera ingresos</p>
+                <a href="convertir-tutor.html" class="btn btn-primary" style="margin-top: 1rem; display: inline-block;">Ser Tutor</a>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 3rem; background: var(--green-soft);">
+            <h2 style="color: var(--green-dark);">¿Por qué elegir nuestro sistema?</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; margin-top: 1.5rem;">
+                <div style="text-align: center;">
+                    <h4 style="color: var(--green-dark);">✓ Tutores Verificados</h4>
+                    <p>Todos nuestros tutores son verificados</p>
+                </div>
+                <div style="text-align: center;">
+                    <h4 style="color: var(--green-dark);">✓ Precios Flexibles</h4>
+                    <p>Encuentra tutores que se ajusten a tu presupuesto</p>
+                </div>
+                <div style="text-align: center;">
+                    <h4 style="color: var(--green-dark);">✓ Múltiples Materias</h4>
+                    <p>Amplia variedad de áreas de estudio</p>
+                </div>
+                <div style="text-align: center;">
+                    <h4 style="color: var(--green-dark);">✓ Fácil de Usar</h4>
+                    <p>Interfaz intuitiva y sencilla</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components/navbar.js"></script>
+    <script>
+        const authenticated = isAuthenticated();
+        const heroButtons = document.getElementById('heroButtons');
+        
+        if (!authenticated) {
+            heroButtons.innerHTML = `
+                <a href="register.html" class="btn btn-primary" style="margin: 0.5rem;">Registrarse</a>
+                <a href="login.html" class="btn btn-secondary" style="margin: 0.5rem;">Iniciar Sesión</a>
+            `;
+        }
+
+        // ✅ También actualizar la card "Conviértete en Tutor" si ya es tutor
+        setTimeout(() => {
+            const roleFromToken = getRoleFromToken();
+            const savedRole = localStorage.getItem('userRole');
+            const currentRole = roleFromToken || savedRole;
+            
+            const tutorCard = document.querySelector('.feature-card:last-child a');
+            if (tutorCard && currentRole === 'ROLE_TUTOR') {
+                tutorCard.textContent = 'Mi Perfil de Tutor';
+                tutorCard.href = 'tutor-perfil.html';
+                
+                const cardTitle = tutorCard.parentElement.querySelector('.feature-title');
+                const cardText = tutorCard.parentElement.querySelector('p');
+                if (cardTitle) cardTitle.textContent = 'Mi Perfil de Tutor';
+                if (cardText) cardText.textContent = 'Gestiona tu perfil y configuración como tutor';
+            }
+        }, 500);
+    </script>
+</body>
+</html>

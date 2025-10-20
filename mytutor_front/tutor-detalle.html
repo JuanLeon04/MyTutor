@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle del Tutor - Sistema de Tutorías</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="navbar"></div>
+    
+    <div class="container">
+        <div id="errorAlert" class="alert alert-error"></div>
+        <div id="loadingDiv" class="loading">
+            <div class="spinner"></div>
+            <p>Cargando información del tutor...</p>
+        </div>
+        
+        <div id="tutorContent" style="display: none;">
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+                <div class="card" style="text-align: center;">
+                    <img id="tutorAvatar" src="" alt="Tutor" style="width: 150px; height: 150px; border-radius: 50%; margin: 0 auto 1rem;">
+                    <h2 id="tutorName"></h2>
+                    <p id="tutorUsername" style="color: #757575;"></p>
+                    <p id="tutorPrice" style="color: #1976d2; font-weight: bold; font-size: 1.3rem; margin-top: 1rem;"></p>
+                </div>
+                
+                <div class="card">
+                    <h3>Biografía</h3>
+                    <p id="tutorBio"></p>
+                    
+                    <h3 style="margin-top: 2rem;">Experiencia</h3>
+                    <p id="tutorExperience"></p>
+                    
+                    <h3 style="margin-top: 2rem;">Información de contacto</h3>
+                    <p><strong>Correo:</strong> <span id="tutorEmail"></span></p>
+                    <p><strong>Teléfono:</strong> <span id="tutorPhone"></span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components/navbar.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const tutorId = urlParams.get('id');
+        
+        if (!tutorId) {
+            showError('errorAlert', 'ID de tutor no proporcionado');
+            document.getElementById('loadingDiv').style.display = 'none';
+        } else {
+            loadTutorDetail();
+        }
+        
+        async function loadTutorDetail() {
+            try {
+                const tutor = await TutorAPI.getById(tutorId);
+                
+                document.getElementById('tutorAvatar').src = tutor.usuario?.fotoPerfil || 'https://via.placeholder.com/150';
+                document.getElementById('tutorName').textContent = `${tutor.usuario?.nombre} ${tutor.usuario?.apellido}`;
+                document.getElementById('tutorUsername').textContent = `@${tutor.usuario?.nombreUsuario}`;
+                document.getElementById('tutorPrice').textContent = `${formatPrice(tutor.precioHora)} por hora`;
+                document.getElementById('tutorBio').textContent = tutor.bio || 'El tutor no ha proporcionado una biografía.';
+                document.getElementById('tutorExperience').textContent = tutor.experiencia || 'El tutor no ha detallado su experiencia.';
+                document.getElementById('tutorEmail').textContent = tutor.usuario?.correo || 'No disponible';
+                document.getElementById('tutorPhone').textContent = tutor.usuario?.telefono || 'No disponible';
+                
+                document.getElementById('loadingDiv').style.display = 'none';
+                document.getElementById('tutorContent').style.display = 'block';
+            } catch (error) {
+                document.getElementById('loadingDiv').style.display = 'none';
+                showError('errorAlert', 'Error al cargar tutor: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Materias - Sistema de Tutorías</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="navbar"></div>
+    
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1 class="card-title" style="margin: 0;">Lista de Materias</h1>
+            <div id="adminButtons"></div>
+        </div>
+        
+        <div id="errorAlert" class="alert alert-error"></div>
+        <div id="loadingDiv" class="loading">
+            <div class="spinner"></div>
+            <p>Cargando materias...</p>
+        </div>
+        
+        <div class="card">
+            <table class="table" id="materiasTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th id="actionsHeader" style="display: none;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="materiasBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components/navbar.js"></script>
+    <script>
+        const admin = isAdmin();
+        
+        console.log('📊 Estado en materias.html:');
+        console.log('  - Es admin:', admin);
+        
+        if (admin) {
+            document.getElementById('adminButtons').innerHTML = `
+                <a href="materia-form.html" class="btn btn-primary">+ Nueva Materia</a>
+            `;
+            document.getElementById('actionsHeader').style.display = 'table-cell';
+        }
+        
+        function loadMaterias() {
+            // ✅ La lista de materias es pública, no requiere token
+            const request = sendRequest('/api/materia/list', 'GET');
+            
+            request.onload = function() {
+                document.getElementById('loadingDiv').style.display = 'none';
+                
+                if (request.status === 200) {
+                    const materias = request.response;
+                    
+                    if (materias.length === 0) {
+                        document.getElementById('materiasBody').innerHTML = `
+                            <tr><td colspan="${admin ? 4 : 3}" style="text-align: center;">No hay materias disponibles</td></tr>
+                        `;
+                        return;
+                    }
+                    
+                    const materiasHTML = materias.map(materia => `
+                        <tr>
+                            <td>${materia.id}</td>
+                            <td>${materia.nombre}</td>
+                            <td>${materia.descripcion || 'Sin descripción'}</td>
+                            ${admin ? `
+                                <td>
+                                    <a href="materia-form.html?id=${materia.id}" class="btn btn-secondary" style="margin-right: 0.5rem;">Editar</a>
+                                    <button onclick="deleteMateria(${materia.id})" class="btn btn-danger">Eliminar</button>
+                                </td>
+                            ` : ''}
+                        </tr>
+                    `).join('');
+                    
+                    document.getElementById('materiasBody').innerHTML = materiasHTML;
+                } else {
+                    showError('errorAlert', 'Error al cargar materias');
+                }
+            };
+            
+            request.onerror = function() {
+                document.getElementById('loadingDiv').style.display = 'none';
+                showError('errorAlert', 'Error de conexión');
+            };
+        }
+        
+        function deleteMateria(id) {
+            if (!admin) {
+                alert('❌ No tienes permisos para eliminar materias');
+                return;
+            }
+            
+            if (!confirm('¿Está seguro de que desea eliminar esta materia?')) return;
+            
+            console.log('🗑️ Eliminando materia con ID:', id);
+            console.log('🔑 Token presente:', !!localStorage.getItem('token'));
+            console.log('👤 Es admin:', admin);
+            
+            // ✅ IMPORTANTE: Usar DELETE /api/materia/{id}
+            const request = sendRequest(`/api/materia/${id}`, 'DELETE');
+            
+            request.onload = function() {
+                console.log('📡 Respuesta del servidor:', request.status);
+                
+                if (request.status === 200 || request.status === 204) {
+                    alert('✅ Materia eliminada correctamente');
+                    loadMaterias();
+                } else if (request.status === 401) {
+                    alert('❌ No estás autenticado. Por favor inicia sesión nuevamente.');
+                    localStorage.removeItem('token');
+                    redirect('login.html');
+                } else if (request.status === 403) {
+                    alert('❌ No tienes permisos de administrador para eliminar materias');
+                    console.error('❌ Token:', localStorage.getItem('token')?.substring(0, 30) + '...');
+                } else {
+                    showError('errorAlert', '❌ Error al eliminar materia. Código: ' + request.status);
+                }
+            };
+            
+            request.onerror = function() {
+                showError('errorAlert', '❌ Error de conexión');
+            };
+        }
+        
+        loadMaterias();
+    </script>
+</body>
+</html>

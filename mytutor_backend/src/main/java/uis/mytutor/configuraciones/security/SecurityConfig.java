@@ -29,7 +29,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
         corsConfig.setAllowedOrigins(List.of(
-                "http://10.14.72.22:3000",  // tu front en red
+                "http://10.14.30.68:3000",  // tu front en red
                 "http://localhost:3000"     // opcional: front local
         ));
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));

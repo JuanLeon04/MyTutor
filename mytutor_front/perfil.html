@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Perfil - Sistema de Tutorías</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="navbar"></div>
+    
+    <div class="container">
+        <div class="card" style="max-width: 700px; margin: 2rem auto;">
+            <h2 class="card-title">Actualizar Perfil</h2>
+            
+            <div id="errorAlert" class="alert alert-error"></div>
+            <div id="successAlert" class="alert alert-success"></div>
+            <div id="loadingDiv" class="loading">
+                <div class="spinner"></div>
+                <p>Cargando datos del usuario...</p>
+            </div>
+            
+            <form id="perfilForm" style="display: none;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="nombre">Nombre</label>
+                        <input type="text" id="nombre" name="nombre" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="apellido">Apellido</label>
+                        <input type="text" id="apellido" name="apellido" class="form-input" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="correo">Correo Electrónico</label>
+                    <input type="email" id="correo" name="correo" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="telefono">Teléfono</label>
+                    <input type="tel" id="telefono" name="telefono" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="fotoPerfil">URL Foto de Perfil</label>
+                    <input type="url" id="fotoPerfil" name="fotoPerfil" class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="nombreUsuario">Nombre de Usuario</label>
+                    <input type="text" id="nombreUsuario" name="nombreUsuario" class="form-input" required>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="password">Nueva Contraseña (dejar en blanco)</label>
+                        <input type="password" id="password" name="password" class="form-input">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="confirmPassword">Confirmar Contraseña</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" class="form-input">
+                    </div>
+                </div>
+                
+                <input type="hidden" id="userId">
+                <input type="hidden" id="activo">
+                
+                <div style="display: flex; justify-content: space-between; margin-top: 1.5rem;">
+                    <button type="button" onclick="deleteAccount()" class="btn btn-danger">Eliminar Cuenta</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Perfil</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components/navbar.js"></script>
+    <script>
+        // Verificar autenticación
+        if (!isAuthenticated()) {
+            redirect('login.html');
+        }
+
+        function loadUserData() {
+            // ✅ Usar /api/usuario sin ID - el backend obtiene el usuario del token
+            const request = sendRequest('/api/usuario', 'GET');
+            
+            request.onload = function() {
+                document.getElementById('loadingDiv').style.display = 'none';
+                
+                if (request.status === 200) {
+                    const userData = request.response;
+                    console.log('✅ Datos del usuario:', userData);
+                    
+                    document.getElementById('userId').value = userData.id;
+                    document.getElementById('nombre').value = userData.nombre || '';
+                    document.getElementById('apellido').value = userData.apellido || '';
+                    document.getElementById('correo').value = userData.correo || '';
+                    document.getElementById('telefono').value = userData.telefono || '';
+                    document.getElementById('fotoPerfil').value = userData.fotoPerfil || '';
+                    document.getElementById('nombreUsuario').value = userData.nombreUsuario || '';
+                    document.getElementById('activo').value = userData.activo !== undefined ? userData.activo : true;
+                    
+                    document.getElementById('perfilForm').style.display = 'block';
+                } else if (request.status === 401 || request.status === 403) {
+                    showError('errorAlert', '❌ Sesión expirada. Inicia sesión nuevamente.');
+                    setTimeout(() => {
+                        localStorage.removeItem('token');
+                        redirect('login.html');
+                    }, 2000);
+                } else {
+                    showError('errorAlert', '❌ Error al cargar datos del usuario');
+                }
+            };
+            
+            request.onerror = function() {
+                document.getElementById('loadingDiv').style.display = 'none';
+                showError('errorAlert', '❌ Error de conexión');
+            };
+        }
+
+        document.getElementById('perfilForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            hideError('errorAlert');
+            
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (password && password !== confirmPassword) {
+                showError('errorAlert', '❌ Las contraseñas no coinciden');
+                return;
+            }
+            
+            const formData = {
+                nombre: document.getElementById('nombre').value,
+                apellido: document.getElementById('apellido').value,
+                correo: document.getElementById('correo').value,
+                telefono: document.getElementById('telefono').value,
+                fotoPerfil: document.getElementById('fotoPerfil').value,
+                nombreUsuario: document.getElementById('nombreUsuario').value,
+                activo: document.getElementById('activo').value === 'true'
+            };
+            
+            if (password) {
+                formData.password = password;
+            }
+            
+            console.log('📤 Enviando actualización:', formData);
+            
+            const request = sendRequest('/api/usuario', 'PUT', formData);
+            
+            request.onload = function() {
+                if (request.status === 200) {
+                    showSuccess('successAlert', '✅ Perfil actualizado correctamente');
+                    document.getElementById('password').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                } else if (request.status === 401 || request.status === 403) {
+                    showError('errorAlert', '❌ No tienes permisos. Tu sesión puede haber expirado.');
+                    setTimeout(() => {
+                        localStorage.removeItem('token');
+                        redirect('login.html');
+                    }, 2000);
+                } else {
+                    showError('errorAlert', '❌ Error al actualizar perfil');
+                }
+            };
+            
+            request.onerror = function() {
+                showError('errorAlert', '❌ Error de conexión');
+            };
+        });
+
+        function deleteAccount() {
+            if (!confirm('¿Está seguro de que desea eliminar su cuenta? Esta acción no se puede deshacer.')) {
+                return;
+            }
+            
+            const request = sendRequest('/api/usuario', 'DELETE');
+            
+            request.onload = function() {
+                if (request.status === 200) {
+                    alert('✅ Cuenta eliminada correctamente');
+                    localStorage.removeItem('token');
+                    redirect('login.html');
+                } else {
+                    showError('errorAlert', '❌ Error al eliminar cuenta');
+                }
+            };
+            
+            request.onerror = function() {
+                showError('errorAlert', '❌ Error de conexión');
+            };
+        }
+
+        loadUserData();
+    </script>
+</body>
+</html>

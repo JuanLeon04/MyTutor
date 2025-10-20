@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertirse en Tutor - Sistema de Tutorías</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="navbar"></div>
+    
+    <div class="container">
+        <div class="card" style="max-width: 700px; margin: 2rem auto;">
+            <h2 class="card-title">Convertirse en Tutor</h2>
+            
+            <div id="errorAlert" class="alert alert-error"></div>
+            <div id="successAlert" class="alert alert-success"></div>
+            
+            <form id="tutorForm">
+                <div class="form-group">
+                    <label class="form-label" for="bio">Biografía</label>
+                    <textarea id="bio" name="bio" class="form-input" rows="4" required 
+                              placeholder="Describe tu experiencia, formación y áreas de especialización"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="precioHora">Precio por Hora (COP)</label>
+                    <input type="number" id="precioHora" name="precioHora" class="form-input" required min="0" step="1000">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="experiencia">Experiencia</label>
+                    <textarea id="experiencia" name="experiencia" class="form-input" rows="4" required
+                              placeholder="Detalla tu experiencia académica y profesional"></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Convertirse en Tutor</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components/navbar.js"></script>
+    <script>
+        if (!isAuthenticated()) {
+            redirect('login.html');
+        }
+
+        // ✅ Verificar si ya es tutor con conversión automática TUTOR = ROLE_TUTOR
+        function checkIfAlreadyTutor() {
+            console.log('🔍 Verificando si ya es tutor con conversión automática...');
+            
+            // ✅ 1. Verificar usando isTutor() que maneja TUTOR = ROLE_TUTOR automáticamente
+            if (isTutor()) {
+                console.log('✅ Usuario ya es tutor (TUTOR = ROLE_TUTOR detectado)');
+                localStorage.setItem('userRole', 'ROLE_TUTOR');
+                alert('✅ Ya eres tutor. Redirigiendo a tu perfil...');
+                redirect('tutor-perfil.html');
+                return;
+            }
+            
+            // ✅ 2. Verificar el rol convertido automáticamente
+            const roleFromToken = getRoleFromToken();
+            console.log('👤 Rol convertido automáticamente:', roleFromToken);
+            
+            if (roleFromToken === 'ROLE_TUTOR') {
+                localStorage.setItem('userRole', 'ROLE_TUTOR');
+                alert('✅ Ya eres tutor. Redirigiendo a tu perfil...');
+                redirect('tutor-perfil.html');
+                return;
+            }
+            
+            // ✅ 3. Verificar rol guardado
+            const savedRole = localStorage.getItem('userRole');
+            if (savedRole === 'ROLE_TUTOR') {
+                alert('✅ Ya eres tutor. Redirigiendo a tu perfil...');
+                redirect('tutor-perfil.html');
+                return;
+            }
+            
+            // ✅ 4. Verificación directa del token crudo
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const payload = parseJwt(token);
+                    if (payload.rol === 'TUTOR') {
+                        console.log('✅ Token crudo detectó TUTOR, convirtiendo y redirigiendo...');
+                        localStorage.setItem('userRole', 'ROLE_TUTOR');
+                        alert('✅ Ya eres tutor (rol: TUTOR). Redirigiendo a tu perfil...');
+                        redirect('tutor-perfil.html');
+                        return;
+                    }
+                } catch (e) {
+                    console.log('❌ Error al verificar token:', e);
+                }
+            }
+            
+            console.log('✅ Usuario puede crear perfil de tutor');
+        }
+        
+        checkIfAlreadyTutor();
+
+        document.getElementById('tutorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideError('errorAlert');
+            
+            const formData = {
+                bio: document.getElementById('bio').value,
+                precioHora: parseFloat(document.getElementById('precioHora').value),
+                experiencia: document.getElementById('experiencia').value
+            };
+            
+            console.log('📤 Creando perfil de tutor:', formData);
+            
+            try {
+                await TutorAPI.create(formData);
+                
+                // ✅ Actualizar el rol en localStorage
+                localStorage.setItem('userRole', 'ROLE_TUTOR');
+                localStorage.setItem('isTutor', 'true');
+                
+                showSuccess('successAlert', '✅ ¡Felicidades! Tu perfil de tutor ha sido creado.\n\nRedirigiendo...');
+                
+                setTimeout(() => {
+                    window.location.href = 'tutor-perfil.html';
+                }, 2000);
+            } catch (error) {
+                console.error('❌ Error al crear perfil:', error);
+                showError('errorAlert', '❌ Error al crear perfil de tutor: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

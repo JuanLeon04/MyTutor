@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Perfil de Tutor - Sistema de Tutorías</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="navbar"></div>
+    
+    <div class="container">
+        <div class="card" style="max-width: 700px; margin: 2rem auto;">
+            <h2 class="card-title">Editar Mi Perfil de Tutor</h2>
+            
+            <div id="errorAlert" class="alert alert-error"></div>
+            <div id="successAlert" class="alert alert-success"></div>
+            <div id="loadingDiv" class="loading">
+                <div class="spinner"></div>
+                <p>Cargando datos del tutor...</p>
+            </div>
+            
+            <form id="tutorForm" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label" for="bio">Biografía</label>
+                    <textarea id="bio" name="bio" class="form-input" rows="4" required 
+                              placeholder="Describe tu experiencia, formación y áreas de especialización"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="precioHora">Precio por Hora (COP)</label>
+                    <input type="number" id="precioHora" name="precioHora" class="form-input" required min="0" step="1000">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="experiencia">Experiencia</label>
+                    <textarea id="experiencia" name="experiencia" class="form-input" rows="4" required
+                              placeholder="Detalla tu experiencia académica y profesional"></textarea>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; margin-top: 1.5rem;">
+                    <button type="button" onclick="deleteTutorProfile()" class="btn btn-danger">Eliminar Perfil de Tutor</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Perfil</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components/navbar.js"></script>
+    <script>
+        if (!isAuthenticated()) {
+            alert('❌ Debes iniciar sesión');
+            redirect('login.html');
+        }
+
+        function checkTutorAccess() {
+            console.log('🔍 Verificando acceso de tutor...');
+            
+            // ✅ 1. Verificar usando isTutor() que maneja TUTOR = ROLE_TUTOR automáticamente
+            if (isTutor()) {
+                console.log('✅ Usuario es tutor según token (TUTOR = ROLE_TUTOR). Cargando datos...');
+                // Sincronizar localStorage con formato estándar
+                localStorage.setItem('userRole', 'ROLE_TUTOR');
+                loadTutorData();
+                return;
+            }
+            
+            // ✅ 2. Verificar el rol convertido automáticamente
+            const roleFromToken = getRoleFromToken();
+            console.log('👤 Rol convertido automáticamente:', roleFromToken);
+            
+            if (roleFromToken === 'ROLE_TUTOR') {
+                console.log('✅ Token convertido indica ROLE_TUTOR. Cargando datos...');
+                localStorage.setItem('userRole', 'ROLE_TUTOR');
+                loadTutorData();
+                return;
+            }
+            
+            // ✅ 3. Verificar rol guardado en localStorage
+            const savedRole = localStorage.getItem('userRole');
+            if (savedRole === 'ROLE_TUTOR') {
+                console.log('✅ localStorage indica ROLE_TUTOR. Cargando datos...');
+                loadTutorData();
+                return;
+            }
+            
+            // ✅ 4. Verificación directa del token crudo
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const payload = parseJwt(token);
+                    if (payload.rol === 'TUTOR') {
+                        console.log('✅ Token crudo tiene rol TUTOR, convirtiendo y cargando...');
+                        localStorage.setItem('userRole', 'ROLE_TUTOR');
+                        loadTutorData();
+                        return;
+                    }
+                } catch (e) {
+                    console.log('❌ Error al verificar token:', e);
+                }
+            }
+            
+            console.log('❌ Usuario no es tutor');
+            alert('❌ No eres tutor. Primero debes crear un perfil de tutor.');
+            redirect('convertir-tutor.html');
+        }
+
+        async function loadTutorData() {
+            try {
+                const tutor = await TutorAPI.getMyProfile();
+                
+                document.getElementById('bio').value = tutor.bio || '';
+                document.getElementById('precioHora').value = tutor.precioHora || 0;
+                document.getElementById('experiencia').value = tutor.experiencia || '';
+                
+                document.getElementById('loadingDiv').style.display = 'none';
+                document.getElementById('tutorForm').style.display = 'block';
+                
+            } catch (error) {
+                console.error('❌ Error al cargar datos del tutor:', error);
+                document.getElementById('loadingDiv').style.display = 'none';
+                
+                // ✅ Manejo silencioso de errores - solo mostrar formulario
+                if (error.message.includes('No tienes permisos de tutor')) {
+                    // Mostrar formulario vacío sin mensaje de error
+                    document.getElementById('tutorForm').style.display = 'block';
+                } else if (error.message.includes('No tienes perfil de tutor')) {
+                    showError('errorAlert', '❌ No tienes un perfil de tutor creado. Redirigiendo...');
+                    setTimeout(() => redirect('convertir-tutor.html'), 2000);
+                } else {
+                    showError('errorAlert', '❌ ' + error.message);
+                }
+            }
+        }
+
+        document.getElementById('tutorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideError('errorAlert');
+            hideError('successAlert');
+            
+            const bio = document.getElementById('bio').value.trim();
+            const precioHora = parseFloat(document.getElementById('precioHora').value);
+            const experiencia = document.getElementById('experiencia').value.trim();
+            
+            if (!bio || !experiencia) {
+                showError('errorAlert', '❌ La biografía y experiencia son obligatorias');
+                return;
+            }
+            
+            if (precioHora <= 0 || isNaN(precioHora)) {
+                showError('errorAlert', '❌ El precio por hora debe ser mayor a 0');
+                return;
+            }
+            
+            const formData = {
+                bio: bio,
+                precioHora: precioHora,
+                experiencia: experiencia
+            };
+            
+            try {
+                const result = await TutorAPI.update(formData);
+                showSuccess('successAlert', '✅ Perfil de tutor actualizado correctamente');
+                window.scrollTo(0, 0);
+            } catch (error) {
+                showError('errorAlert', '❌ Error al actualizar perfil: ' + error.message);
+            }
+        });
+
+        function deleteTutorProfile() {
+            if (!confirm('¿Está seguro de que desea eliminar su perfil de tutor?\n\nEsta acción no se puede deshacer y ya no aparecerás como tutor.')) {
+                return;
+            }
+            
+            const request = sendRequest('/api/tutor', 'DELETE');
+            
+            request.onload = function() {
+                if (request.status === 200 || request.status === 204) {
+                    localStorage.setItem('userRole', 'ROLE_ESTUDIANTE');
+                    localStorage.setItem('isTutor', 'false');
+                    
+                    alert('✅ Perfil de tutor eliminado correctamente.\n\nYa no eres tutor.');
+                    window.location.href = 'index.html';
+                } else {
+                    showError('errorAlert', '❌ Error al eliminar perfil de tutor');
+                }
+            };
+            
+            request.onerror = function() {
+                showError('errorAlert', '❌ Error de conexión');
+            };
+        }
+
+        checkTutorAccess();
+    </script>
+</body>
+</html>

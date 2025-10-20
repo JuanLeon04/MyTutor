@@ -50,7 +50,7 @@ public class MateriaControlador {
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping()
     public ResponseEntity<Materia> editarMateria(@RequestBody Materia materia) {
-        Materia obj = materiaServicio.addMateria(materia);
+        Materia obj = materiaServicio.updateMateria(materia);
         if (obj == null) {
             return ResponseEntity.badRequest().build();
         }
@@ -59,7 +59,7 @@ public class MateriaControlador {
 
     @Operation(summary = "Borrar una materia por id (Solo rol ADMIN)")
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping()
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarUsuarioPorId(@PathVariable Long id) {
         boolean borrado = materiaServicio.deleteMateriaById(id);
         if (borrado) {
